@@ -20,7 +20,7 @@ MAILGUN_BASE_URL = os.getenv("MAILGUN_BASE_URL", "https://api.mailgun.net")
 MAILGUN_FROM = os.getenv("MAILGUN_FROM", "")
 MAILGUN_WEBHOOK_SIGNING_KEY = os.getenv("MAILGUN_WEBHOOK_SIGNING_KEY", "")
 INBOUND_ADDRESS = os.getenv("INBOUND_ADDRESS", "").strip().lower()
-TIMEZONE = os.getenv("ELDORIA_TIMEZONE", "Australia/Adelaide")
+TIMEZONE = os.getenv("LUMINOS_TIMEZONE", "Australia/Adelaide")
 
 def verify_mailgun_signature(timestamp: str, token: str, signature: str)-> bool:
     if not MAILGUN_WEBHOOK_SIGNING_KEY or not timestamp or not signature:
@@ -49,7 +49,7 @@ def valid_email(address: str) -> bool:
 
 @app.get("/health")
 def health():
-    return jsonify({"status": "ok", "service": "eldoria-email-rpg"})
+    return jsonify({"status": "ok", "service": "luminos-email-rpg"})
 
 @app.post("/mailgun/inbound")
 def inbound():
@@ -88,7 +88,7 @@ def inbound():
 
     # Consumed state before sending to Mailgun, so does not consume second turn on retry.
     try:
-        send_email(sender, "Eldoria - Emailed Adventure", reply)
+        send_email(sender, "Luminos - Emailed Adventure", reply)
     except Exception:
         app.logger.exeception("Game action saved, but reply email could not be sent")
         # 200 avoids processing same action on provider retry.

@@ -1,7 +1,7 @@
 services:
-  eldoria:
+  luminos:
     build:
-      container_name: eldoria-rpg-server
+      container_name: luminos-rpg-server
       restart: unless-stopped
       env_file: .env
       ports:
