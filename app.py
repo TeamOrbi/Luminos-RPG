@@ -29,8 +29,9 @@ def verify_mailgun_signature(timestamp: str, token: str, signature: str)-> bool:
         if abs(time.time() - int(timestamp)) > 15 * 60:
             return False
     except (TypeError, ValueError):
-        digest = hmac.new(MAILGUN_WEBHOOK_SIGNING_KEY.encode(), (timestamp + token).encode(), hashlib.sha256).hexdigest()
-        return hmac.compare_digest(digest, signature)
+        return False
+    digest = hmac.new(MAILGUN_WEBHOOK_SIGNING_KEY.encode(), (timestamp + token).encode(), hashlib.sha256).hexdigest()
+    return hmac.compare_digest(digest, signature)
 
 def send_email(to_address: str, subject: str, body: str) -> None:
     if not all((MAILGUN_API_KEY, MAILGUN_DOMAIN, MAILGUN_FROM)):
@@ -63,9 +64,9 @@ def inbound():
     body = fields.get("body-plain", "")
     message_id = (fields.get("Message-Id") or fields.get("message-id") or "").strip()
     if not valid_email(sender):
-        return jsonify ({"error": "missing or invalid sender"}), 400
+        return jsonify({"error": "missing or invalid sender"}), 400
     if INBOUND_ADDRESS and recipient != INBOUND_ADDRESS:
-        return jsonify ({"error": "unexpected recipient"}), 400
+        return jsonify({"error": "unexpected recipient"}), 400
     if not message_id:
         # Stable ID is required for safe retries
         return jsonify({"error": "missing Message-Id"}), 400
@@ -90,7 +91,7 @@ def inbound():
     try:
         send_email(sender, "Luminos - Emailed Adventure", reply)
     except Exception:
-        app.logger.exeception("Game action saved, but reply email could not be sent")
+        app.logger.exception("Game action saved, but reply email could not be sent")
         # 200 avoids processing same action on provider retry.
         return jsonify({"status": "processed", "reply": "send_failed_check_logs"}), 200
     return jsonify({"status": "processed"}), 200

@@ -1,6 +1,6 @@
 services:
   luminos:
-    build:
+    build: 
       container_name: luminos-rpg-server
       restart: unless-stopped
       env_file: .env

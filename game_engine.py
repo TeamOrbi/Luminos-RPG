@@ -66,6 +66,16 @@ ENEMY_MIN_LEVEL = {
     "Young Dragon": 9,
 }
 ENEMY_BY_NAME = {enemy[0]: enemy for enemy in ENEMIES}
+SHOP_ITEMS = {
+    "HEALING POTION": {"price": 12, "description": "restores up to 25 HP in a single gulp", "kind": "healing_potion"},
+    "MANA POTION": {"price": 15, "description": "restores up to 10 mana", "kind": "mana_potion"},
+    "BOMB": {"price": 20, "description": "deals 20 damage during combat", "kind": "bomb"},
+    "BRONZE SWORD": {"price": 25, "description": "+2 attack while equipped", "kind": "weapon", "bonus": 2},
+    "IRON SWORD": {"price": 55, "description": "+4 attack while equipped", "kind": "weapon", "bonus": 4},
+    "LEATHER ARMOUR": {"price": 30, "description": "reduces incoming hits by 2", "kind": "armour", "bonus": 2},
+    "CHAINMAIL": {"price": 65, "description": "reduces incoming hits by 4", "kind": "armour", "bonus": 4},
+}
+
 FREE_COMMANDS = {"HELP", "STATUS", "INVENTORY", "MAP", "LOCATIONS", "ABILITIES", "SPELLS"}
 ACTIONS = {"EXPLORE", "ATTACK", "DEFEND", "POTION", "FLEE", "REST", "TRAVEL"}
 
@@ -156,6 +166,10 @@ def _help() -> str:
             "ATTACK - strike your current enemy\n"
             "DEFEND - reduce the next enemy hit\n"
             "POTION - restore health (if you have one)\n"
+            "SHOP - browse the Luminos market (free)\n"
+            "BUY <item> - purchase a item in Luminos (uses today's action\n"
+            "USE MANA POTION - restore mana"
+            "USE BOMB - deal damage during combat"
             "FLEE - leave a fight\n"
             "REST - recover some health when you are not in combat\n"
             "TRAVEL <location> - move to another area (uses today's action)\n"
@@ -164,15 +178,30 @@ def _help() -> str:
             "CAST <name> or ABILITY <name> - use a class ability in combat\n"
             "STATUS or INVENTORY - free, do not use your daily action\n\n"
             "Destinations: Luminos, Whistelling Woods, Goblin Caves, Haunted Ruins, Frostfang Mountains, Dragon's Lair.\n"
-            "You may make one game-changing action per local calendar day. Status, inventory, map, abilities and help are free.")
+            "You may make one game-changing action per local calendar day. Status, inventory, map, shop, abilities and help are free.")
 
 def _status(p) -> str:
     enemy = f"\nEnemy: {p['enemy_name']} ({p['enemy_hp']} HP)" if p["enemy_name"] else "\nYou are not in combat."
     return (f"{p['name']} the {p['class'].title()}\nLevel {p['level']} | XP {p['xp']} | Gold {p['gold']}\n"
             f"Health: {p['hp']}/{p['max_hp']} | Mana: {p['mana']}/{p['max_mana']} | Potions: {p['potions']}\nLocation: {p['location']}{enemy}")
 
-def _inventory(p) -> str:
-    return f"Inventory\n- Healing potions: {p['potions']}\n- Gold: {p['gold']}\n- Mana: {p['mana']}/{p['max_mana']}"
+def _inventory(conn, p) -> str:
+    rows = conn.execute("SELECT item, quantity FROM player_items WHERE email=? AND quantity>0 ORDER BY item", (p["email"],)).fetchall()
+    items = [f"- {row['item'].title()}: {row['quantity']}" for row in rows]
+    if not items:
+        items = ["- No other items"]
+    return (f"Inventory\n- Healing potions: {p['potions']}\n" + "\n".join(items) +
+           f"\n- Equipped weapon: {p['weapon'] or 'None'} (+{p['attack_bonus']} attack)" +
+           f"\n- Equipped armour: {p['armour'] or 'None'} (reduces hits by {p['armour_bonus']})" +
+           f"\n- Gold: {p['gold']}\n- Mana: {p['mana']}/{p['max_mana']}")
+
+def _shop() -> str:
+    lines = ["Luminos Market (SHOP is free; BUY uses your daily action):"]
+    for name, item in SHOP_ITEMS.items():
+        lines.append(f"- {name.title()} - {item['price']} gold; {item['description']}.")
+    lines.append("\nBuy a item by emailing BUY followed by its name. e.g. BUY MANA POTION.")
+    lines.append("The market is only available in Luminos. Weapons and armour equip automatically when purchased.")
+    return "\n.join(lines)"
 
 def _abilities(p) -> str:
     lines = [f"Abilities for {p['name']} the {p['class'].title()}:"]
@@ -246,32 +275,46 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
                 "RANGER - hunter; Aimed Shot, Trap at level 3\n"
                 "CLERIC - healer; Holy Bolt, Heal at level 3\n"
                 "WARLOCK - dark magic; Shadow Bold, Drain Life at level 3\n"
-                "BARD - magical support; Dissonant Note, Inspiring Song at level 3\n\n Reply with WARRIOR, MAGE, ROGUE, PALADIN, RANGER, CLERIC, WARLOCK or BARD." 
+                "BARD - magical support; Dissonant Note, Inspiring Song at level 3\n\n Reply with WARRIOR, MAGE, ROGUE, PALADIN, RANGER, CLERIC, WARLOCK or BARD.")
 
     if p["status"] == "awaiting_class":
         chosen = upper
         if chosen not in CLASSES:
             return "Please choose WARRIOR, MAGE, ROGUE, PALADIN, RANGER, CLERIC, WARLOCK or BARD."
         stats = CLASSES[chosen]
-        conn.execute("UPDATE players SET class=?, status='playing', hp=?, max_hp=?, mana=?, max_mana=?, location='Whistling Woods' WHERE email=?",
+        conn.execute("UPDATE players SET class=?, status='playing', hp=?, max_hp=?, mana=?, max_mana=?, location='Whispering Woods' WHERE email=?",
                      (chosen, stats["hp"], stats["hp"], stats["mana"], stats["mana"], email))
         return (f"Your adventure begins, {p['name']} the {chosen.title()}!\n\n"
                 f"You are {stats['description']}. You have {stats['hp']} HP, {stats['mana']} mana and 2 healing potions.\n\n"
-                "You stand at the edge of the Whistling Woods. What do you want to do?\n"
-                "Reply EXPLORE to begin. Email ABILITIES to see your powers. MAP, STATUS, INVENTORY, ABILITIES and HELP are always free.\n\n" + _help())
+                "You stand at the edge of the Whistling Woods. What will you do?\n"
+                "Reply EXPLORE to begin. Email ABILITIES to see your powers. MAP, STATUS, INVENTORY, ABILITIES and HELP are free.\n\n" + _help())
 
     if upper in FREE_COMMANDS:
         if upper == "HELP":
             return _help()
+        if upper == "SHOP":
+            if p["location"] != "Luminos":
+                return "The market is in Luminos. Email TRAVEL LUMINOS to head over there, then SHOP. No daily acton was used."
+            return _shop()
         if upper in {"ABILITIES", "SPELLS"}:
             return _abilities(p)
         if upper == "STATUS":
             return _status(p)
         if upper == "MAP" or upper == "LOCATIONS":
             return _map(p)
-        return _inventory(p)
+        return _inventory(conn, p)
 
     ability_name = upper[5:].strip() if upper.startswith("CAST ") else (upper[7:].strip() if upper.startswith("ABILITY ") else None)
+    buy_item = upper[4:].strip() if upper.startswith("BUY ") else None
+    use_item = upper[4:].strip() if upper.startswith("USE ") else None
+    if upper == "BUY":
+        return "What would you like to buy? Email SHOP for the list, then BUY followed by the item name. No daily action was used."
+    if buy_item and buy_item not in SHOP_ITEMS:
+        return f"I don't recognise '{buy_item}'. Email SHOP to see available items. No daily action was used."
+    if upper == "USE":
+        return "What would you like to use? Try USE MANA POTION or USE BOMB. No daily action was used."
+    if use_item and use_item not in {"MANA POTION", "BOMB"}:
+        return "You can use MANA POTION or BOMB. Healing potions can be used with POTION. No daily action was used."
     travel_destination = None
     if upper.startswith("TRAVEL "):
         requested_destination = upper[len("TRAVEL "):].strip().replace("'", "'")
@@ -281,7 +324,7 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
     elif upper == "TRAVEL":
         return "Where would you like to travel? Reply TRAVEL followed by a destination, such as TRAVEL HAUNTED RUINS. Email MAP for destinations. No daily action was used."
 
-    if upper not in ACTIONS and travel_destination is None and ability_name is None:
+    if upper not in ACTIONS and travel_destination is None and ability_name is None and buy_item  is None:
         return "I didn't recognise that command.\n\n" + _help()
 
     ability = ABILITIES.get(ability_name) if ability_name else None
@@ -294,9 +337,25 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
     if ability and p["mana"] < ability["mana"]:
         return f"You need {ability['mana']} mana to use {ability_name}, but have {p['mana']}. REST to recover mana. No daily action was used."
 
-# Check whether command is valid in the current context before spending the daily limit.
-    if upper in {"ATTACK", "DEFEND", "POTION", "FLEE"} or ability_name) and not p["enemy_name"]:
-        return "There is no Enemy here right now. Reply EXPLORE to look for one! No daily action was used."
+    # Check whether this command is valid in the current situation before spending the daily turn.
+    if (upper in {"ATTACK", "DEFEND", "POTION", "FLEE", "USE BOMB"} or ability_name) and not p["enemy_name"]:
+        return "There is no enemy here right now. Reply EXPLORE to look for an adventure. No daily action was used."
+    if buy_item and p["location"] != "Luminos":
+        return "You must be in ELuminos to shop. Email TRAVEL LUMINOS to return. No daily action was used."
+    if buy_item and p["gold"] < SHOP_ITEMS[buy_item]["price"]:
+        return f"{buy_item.title()} costs {SHOP_ITEMS[buy_item]['price']} gold, but you only have {p['gold']}. No daily action was used."
+    if buy_item and SHOP_ITEMS[buy_item]["kind"] == "weapon" and SHOP_ITEMS[buy_item]["bonus"] <= p["attack_bonus"]:
+        return "You already have an equally good or better weapon equipped. No daily action was used."
+    if buy_item and SHOP_ITEMS[buy_item]["kind"] == "armour" and SHOP_ITEMS[buy_item]["bonus"] <= p["armour_bonus"]:
+        return "You already have equally good or better armour equipped. No daily action was used."
+    if use_item == "MANA POTION" and p["mana"] >= p["max_mana"]:
+        return "Your mana is already full. No daily action was used."
+    mana_potion = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item='MANA POTION'", (email,)).fetchone()
+    if use_item == "MANA POTION" and (mana_potion is None or mana_potion["quantity"] < 1):
+        return "You don't have a mana potion. Buy one in Luminos. No daily action was used."
+    bomb_item = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item='BOMB'", (email,)).fetchone()
+    if use_item == "BOMB" and (bomb_item is None or bomb_item["quantity"] < 1):
+        return "You dont't have a bomb. Buy one in Luminos. No daily action was used."
     if ability and "heal" in ability and p["hp"] >= p["max_hp"]:
         return "You are already at full health. No daily action was used."
     if upper == "EXPLORE" and p["enemy_name"]:
@@ -355,8 +414,53 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
         else:
             conn.execute("UPDATE players SET potions=potions+1 WHERE email=?", (email,))
             result.append(f"While exploring {p['location']}, you discover a healing potion and add it to your inventory.")
+    elif buy_item:
+        item = SHOP_ITEMS[buy_item]
+        conn.execute("UPDATE players SET gold=gold-? WHERE email=?", (item["price"], email))
+        if item["kind"] == "healing_potion":
+            conn.execute("UPDATE players SET potions=potions+1 WHERE email=?", (email,))
+            result.append("You buy a healing potion and add it to your inventory.")
+        elif item["kind"] == "mana_potion":
+            conn.execute("INSERT INTO player_items(email,item,quantity) VALUES (?, ?, 1) ON CONFLICT(email,item) DO UPDATE SET quantity=quantity+1", (email, buy_item))
+            result.append("You buy a mana potion. Email USE MANA POTION to restore up to 10 mana.")
+        elif item["kind"] == "bomb":
+            conn.execute("INSERT INTO player_items(email,item,quantity) VALUES (?, ?, 1) ON CONFLICT(email,item) DO UPDATE SET quantity=quantity+1", (email, buy_item))
+            result.append("You buy a bomb. During combat, email USE BOMB to deal 20 damage.")
+        elif item["kind"] == "weapon":
+            conn.execute("UPDATE players SET weapon=?, attack_bonus=? WHERE email=?", (buy_item, item["bonus"], email))
+            result.append(f"You buy and equip the {buy_item.title()}. Your attacks now gain +{item['bonus']} damage.")
+        elif item["kind"] == "armour":
+            conn.execute("UPDATE players SET armour=?, armour_bonus=? WHERE email=?", (buy_item, item["bonus"], email))
+            result.append(f"You buy and equip {buy_item.title()}. Incoming enemy hits are reduced by {item['bonus']} damage (minimum 1).")
+    elif use_item == "MANA POTION":
+        row = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item='MANA POTION'", (email,)).fetchone()
+        restored = min(10, p["max_mana"] - p["mana"])
+        conn.execute("UPDATE players SET mana=mana+? WHERE email=?", (restored, email))
+        conn.execute("UPDATE player_items SET quantity=quantity-1 WHERE email=? AND item='MANA POTION'", (email,))
+        result.append(f"You drink a mana potion and restore {restored} mana.")
+    elif upper == "USE BOMB":
+        row = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item='BOMB'", (email,)).fetchone()
+        enemy_name = p["enemy_name"]
+        enemy_hp = max(0, p["enemy_hp"] - 20)
+        conn.execute("UPDATE player_items SET quantity=quantity-1 WHERE email=? AND item='BOMB'", (email,))
+        result.append(f"You throw a bomb at the {enemy_name}, dealing 20 damage.")
+        if enemy_hp <= 0:
+            _, _, _, xp_reward, gold_reward = ENEMY_BY_NAME[enemy_name]
+            conn.execute("UPDATE players SET enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=gold+? WHERE email=?", (gold_reward, email))
+            result.append(f"You defeat the {enemy_name}! You earn {xp_reward} XP and {gold_reward} gold.")
+            level_msg = _level_up(conn, p, xp_reward)
+            if level_msg:
+                result.append(level_msg)
+        else:
+            damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) - p["armour_bonus"])
+            new_hp = max(0, p["hp"] - damage_taken)
+            conn.execute("UPDATE players SET enemy_hp=?, hp=? WHERE email=?", (enemy_hp, new_hp, email))
+            result.append(f"The {enemy_name} hits back for {damage_taken} damage. You have {new_hp}/{p['max_hp']} HP left.")
+            if new_hp == 0:
+                conn.execute("UPDATE players SET hp=?, enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=MAX(0, gold-3), location='Luminos' WHERE email=?", (max(1, p['max_hp']//2), email))
+                result.append("You collapse and are carried back to Luminos, recovering to half health and losing 3 gold.")
     elif upper == "ATTACK" or ability_name:
-        base = CLASSES[p["class"]]["attack"] + p["level"] - 1
+        base = CLASSES[p["class"]]["attack"] + p["level"] - 1 + p["attack_bonus"]
         if ability_name:
             damage = max(1, int(base * ability["damage"])) if "damage" in ability else 0
             conn.execute("UPDATE players SET mana=mana-? WHERE email=?", (ability["mana"], email))
@@ -394,7 +498,7 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
                 result.append(level_msg)
         else:
             current_hp = conn.execute("SELECT hp FROM players WHERE email=?", (email,)).fetchone()["hp"]
-            damage_taken = random.randint(1, max(2, p["enemy_attack"]))
+            damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) - p["armour_bonus"])
             new_hp = max(0, current_hp - damage_taken)
             conn.execute("UPDATE players SET enemy_hp=?, hp=? WHERE email=?", (enemy_hp, new_hp, email))
             result.append(f"The {p['enemy_name']} hits back for {damage_taken} damage. You have {new_hp}/{p['max_hp']} HP left.")
@@ -402,7 +506,7 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
                 conn.execute("UPDATE players SET hp=?, enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=MAX(0, gold-3), location='Luminos' WHERE email=?", (max(1, p["max_hp"] // 2), email))
                 result.append("You collapse and are carried back to town. You recover half health and lose 3 gold, but your adventure... continues.")
     elif upper == "DEFEND":
-        damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) // 2)
+        damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) // 2 - p["armour_bonus"])
         new_hp = max(0, p["hp"] - damage_taken)
         conn.execute("UPDATE players SET hp=? WHERE email=?", (new_hp, email))
         result.append(f"You brace for the attack and take only {damage_taken} damage. Health: {new_hp}/{p['max_hp']}.")
