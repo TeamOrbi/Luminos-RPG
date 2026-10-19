@@ -22,8 +22,8 @@ MAILGUN_WEBHOOK_SIGNING_KEY = os.getenv("MAILGUN_WEBHOOK_SIGNING_KEY", "")
 INBOUND_ADDRESS = os.getenv("INBOUND_ADDRESS", "").strip().lower()
 TIMEZONE = os.getenv("LUMINOS_TIMEZONE", "Australia/Adelaide")
 
-def verify_mailgun_signature(timestamp: str, token: str, signature: str)-> bool:
-    if not MAILGUN_WEBHOOK_SIGNING_KEY or not timestamp or not signature:
+def verify_mailgun_signature(timestamp: str, token: str, signature: str) -> bool:
+    if not MAILGUN_WEBHOOK_SIGNING_KEY or not timestamp or not token or not signature:
         return False
     try:
         if abs(time.time() - int(timestamp)) > 15 * 60:

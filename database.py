@@ -21,12 +21,23 @@ CREATE TABLE IF NOT EXISTS players (
     max_mana INTEGER NOT NULL DEFAULT 0,
     gold INTEGER NOT NULL DEFAULT 0,
     potions INTEGER NOT NULL DEFAULT 2,
+    weapon TEXT,
+    attack_bonus INTEGER NOT NULL DEFAULT 0,
+    armour TEXT,
+    armour_bonus INTEGER NOT NULL DEFAULT 0,
     location TEXT NOT NULL DEFAULT 'Luminos',
     enemy_name TEXT,
     enemy_hp INTEGER NOT NULL DEFAULT 0,
     enemy_attack INTEGER NOT NULL DEFAULT 0,
     last_action_date TEXT,
     created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+);
+CREATE TABLE IF NOT EXISTS player_items (
+    email TEXT NOT NULL,
+    item TEXT NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 0,
+    PRIMARY KEY (email, item),
+    FOREIGN KEY (email) REFERENCES players(email) ON DELETE CASCADE
 );
 CREATE TABLE IF NOT EXISTS processed_messages (
     message_id TEXT PRIMARY KEY,
@@ -49,11 +60,19 @@ def initialise() -> None:
         columns = {row[1] for row in conn.execute("PRAGMA table_info(players)")}
         if "mana" not in columns:
             conn.execute("ALTER TABLE players ADD COLUMN mana INTEGER NOT NULL DEFAULT 0")
-        if "max mana" not in columns:
+        if "max_mana" not in columns:
             conn.execute("ALTER TABLE players ADD COLUMN max_mana INTEGER NOT NULL DEFAULT 0")
+        if "weapon" not in columns:
+            conn.execute("ALTER TABLE players ADD COLUMN weapon TEXT")
+        if "attack_bonus" not in columns:
+            conn.execute("ALTER TABLE players ADD COLUMN attack_bonus INTEGER NOT NULL DEFAULT 0")
+        if "armour" not in columns:
+            conn.execute("ALTER TABLE players ADD COLUMN armour TEXT")
+        if "armour_bonus" not in columns:
+            conn.execute("ALTER TABLE players ADD COLUMN armour_bonus INTEGER NOT NULL DEFAULT 0")
             # Give existing characters mana when upgrading from v1.1.
-            mana_by_class = {"WARRIOR": 3, "MAGE": 12, "ROGUE": 5, "PALADIN": 8,
-                             "RANGER": 6, "CLERIC": 12, "WARLOCK": 14, "BARD": 10}
+        mana_by_class = {"WARRIOR": 3, "MAGE": 12, "ROGUE": 5, "PALADIN": 8,
+                        "RANGER": 6, "CLERIC": 12, "WARLOCK": 14, "BARD": 10}
         for class_name, mana in mana_by_class.items():
             conn.execute("UPDATE players SET max_mana=?, mana=? WHERE class=? AND max_mana=0",
                          (mana, mana, class_name))

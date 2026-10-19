@@ -33,6 +33,23 @@ ABILITIES = {
     "DRAIN LIFE": {"class": "WARLOCK", "level": 3, "mana": 5, "damage": 1.3, "drain": 10, "description": "steals the life right out of your enemy"},
     "DISSONANT NOTE": {"class": "BARD", "level": 1, "mana": 3, "damage": 1.5, "description": "a magicical musical note, that hurts to hear."},
     "INSPIRING SONG": {"class": "BARD", "level": 3, "mana": 4, "heal": 14, "description": "restores your health through the power of music"},
+    #Abilities/Spells above lev 5
+    "WHIRLWIND": {"class": "WARRIOR", "level": 5, "mana": 2, "damage": 2.2, "description": "a sweeping blow, to sweep your enemies off their feet."},
+    "LAST STAND": {"class": "WARRIOR", "level": 7, "mana": 3, "damage": 2.7, "description": "a mighty finishing blow"},
+    "LIGHTNING BOLT": {"class": "MAGE", "level": 5, "mana": 6, "damage": 2.5, "description": "a bolt of power from the sky, striking your enemy."},
+    "METEOR": {"class": "MAGE", "level": 7, "mana": 9, "damage": 3.2, "description": "a devastating meteor strike from the heavens above"},
+    "SHADOWSTEP": {"class": "ROGUE", "level": 5, "mana": 3, "damage": 2.4, "description": "a sudden strike from the shadows"},
+    "EXECUTE": {"class": "ROGUE", "level": 7, "mana": 4, "damage": 3.0, "description": "a deadly precise strike"},
+    "DIVINE STRIKE": {"class": "PALADIN", "level": 5, "mana": 5, "damage": 2.3, "description": "a powerful radiant blow from the heavens"},
+    "SANCTUARY": {"class": "PALADIN", "level": 7, "mana": 6, "heal": 28, "description": "restores a large chunk of health"},
+    "MULTISHOT": {"class": "RANGER", "level": 5, "mana": 3, "damage": 2.2, "description": "a volley of precise arrows"},
+    "EXPLOSIVE ARROW": {"class": "RANGER", "level": 7, "mana": 5, "damage": 2.9, "description": "an arrow that bursts with flames and explosion"},
+    "RESTORATION": {"class": "CLERIC", "level": 5, "mana": 6, "heal": 30, "description": "restores a great deal of health"},
+    "JUDGEMENT": {"class": "CLERIC", "level": 7, "mana": 7, "damage": 2.7, "description": "a powerful blast of holy, sacred judgement"},
+    "CURSE": {"class": "WARLOCK", "level": 5, "mana": 4, "damage": 2.0, "weaken": 4, "description": "damages and weakens even the strongest enemy"},
+    "SOUL HARVEST": {"class": "WARLOCK", "level": 7, "mana": 7, "damage": 2.2, "drain": 18, "description": "damages a foe and steals the life from them"},
+    "WAR CHANT": {"class": "BARD", "level": 5, "mana": 5, "damage": 2.0, "weaken": 3, "description": "a forceful song that rattles your foe, to their bones."},
+    "HEROIC BALLAD": {"class": "BARD", "level": 7, "mana": 7, "heal": 26, "description": "a stirring ballad that restores health"},
 }
 
 # Enemy tuples are (name, health, attack, XP reward, gold reward).
@@ -74,10 +91,17 @@ SHOP_ITEMS = {
     "IRON SWORD": {"price": 55, "description": "+4 attack while equipped", "kind": "weapon", "bonus": 4},
     "LEATHER ARMOUR": {"price": 30, "description": "reduces incoming hits by 2", "kind": "armour", "bonus": 2},
     "CHAINMAIL": {"price": 65, "description": "reduces incoming hits by 4", "kind": "armour", "bonus": 4},
+    "GREATER HEALING POTION": {"price": 35, "description": "restores up to 50 HP when used", "kind": "greater_healing_potion", "restore": 50},
+    "GREATER MANA POTION": {"price": 32, "description": "restores up to 20 mana when used", "kind": "greater_mana_potion", "restore": 20},
+    "ELIXIR OF VIGOUR": {"price": 48, "description": "restores up to 25 HP and 10 mana points when used", "kind": "elixir"},
+    "FIRE SCROLL": {"price": 28, "description": "deals 35 damage to your current enemy", "kind": "fire_scroll"},
+    "MITHRIL SWORD": {"price": 105, "description": "+7 attack while equipped", "kind": "weapon", "bonus": 7},
+    "RUNED STAFF": {"price": 115, "description": "+8 attack while equipped", "kind": "weapon", "bonus": 8},
+    "PLATE ARMOUR": {"price": 105, "description": "reduces incoming hits by 6", "kind": "armour", "bonus": 6},
 }
 
-FREE_COMMANDS = {"HELP", "STATUS", "INVENTORY", "MAP", "LOCATIONS", "ABILITIES", "SPELLS"}
-ACTIONS = {"EXPLORE", "ATTACK", "DEFEND", "POTION", "FLEE", "REST", "TRAVEL"}
+FREE_COMMANDS = {"HELP", "STATUS", "INVENTORY", "MAP", "LOCATIONS", "ABILITIES", "SPELLS", "SHOP"}
+ACTIONS = {"EXPLORE", "ATTACK", "DEFEND", "POTION", "FLEE", "REST", "TRAVEL", "BUY", "USE MANA POTION", "USE BOMB"}
 
 # Each location has a min level and its own enemy encounters. The enemy tier is checked as well, players should never meet enemies above their tier.
 LOCATIONS = {
@@ -177,7 +201,7 @@ def _help() -> str:
             "ABILITIES or SPELLS - list your class abilities (free)\n"
             "CAST <name> or ABILITY <name> - use a class ability in combat\n"
             "STATUS or INVENTORY - free, do not use your daily action\n\n"
-            "Destinations: Luminos, Whistelling Woods, Goblin Caves, Haunted Ruins, Frostfang Mountains, Dragon's Lair.\n"
+            "Destinations: Luminos, Whistling Woods, Goblin Caves, Haunted Ruins, Frostfang Mountains, Dragon's Lair.\n"
             "You may make one game-changing action per local calendar day. Status, inventory, map, shop, abilities and help are free.")
 
 def _status(p) -> str:
@@ -201,7 +225,7 @@ def _shop() -> str:
         lines.append(f"- {name.title()} - {item['price']} gold; {item['description']}.")
     lines.append("\nBuy a item by emailing BUY followed by its name. e.g. BUY MANA POTION.")
     lines.append("The market is only available in Luminos. Weapons and armour equip automatically when purchased.")
-    return "\n.join(lines)"
+    return "\n".join(lines)
 
 def _abilities(p) -> str:
     lines = [f"Abilities for {p['name']} the {p['class'].title()}:"]
@@ -313,8 +337,10 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
         return f"I don't recognise '{buy_item}'. Email SHOP to see available items. No daily action was used."
     if upper == "USE":
         return "What would you like to use? Try USE MANA POTION or USE BOMB. No daily action was used."
-    if use_item and use_item not in {"MANA POTION", "BOMB"}:
-        return "You can use MANA POTION or BOMB. Healing potions can be used with POTION. No daily action was used."
+    usable_items = {"MANA POTION", "BOMB", "GREATER HEALING POTION", "GREATER MANA POTION", "ELIXIR OF VIGOUR", "FIRE SCROLL"}
+    if use_item and use_item not in usable_items:
+        return "You can use MANA POTION, GREATER MANA POTION, GREATER HEALING POTION, ELIXIR OF VIGOUR, BOMB or FIRE SCROLL. Healing potions can also be used with POTION. No daily action was used."
+
     travel_destination = None
     if upper.startswith("TRAVEL "):
         requested_destination = upper[len("TRAVEL "):].strip().replace("'", "'")
@@ -348,14 +374,19 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
         return "You already have an equally good or better weapon equipped. No daily action was used."
     if buy_item and SHOP_ITEMS[buy_item]["kind"] == "armour" and SHOP_ITEMS[buy_item]["bonus"] <= p["armour_bonus"]:
         return "You already have equally good or better armour equipped. No daily action was used."
-    if use_item == "MANA POTION" and p["mana"] >= p["max_mana"]:
+    if use_item in {"MANA POTION", "GREATER MANA POTION"} and p["mana"] >= p["max_mana"]:
         return "Your mana is already full. No daily action was used."
-    mana_potion = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item='MANA POTION'", (email,)).fetchone()
-    if use_item == "MANA POTION" and (mana_potion is None or mana_potion["quantity"] < 1):
-        return "You don't have a mana potion. Buy one in Luminos. No daily action was used."
-    bomb_item = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item='BOMB'", (email,)).fetchone()
-    if use_item == "BOMB" and (bomb_item is None or bomb_item["quantity"] < 1):
-        return "You dont't have a bomb. Buy one in Luminos. No daily action was used."
+    if use_item == "GREATER HEALING POTION" and p["hp"] >= p["max_hp"]:
+        return "Your health is already full. No daily action was used."
+    if use_item == "ELIXIR OF VIGOUR" and p["hp"] >= p["max_hp"] and p["mana"] >= p["max_mana"]:
+        return "Your health and mana are already full. No daily action was used."
+    if use_item in {"MANA POTION", "GREATER MANA POTION", "GREATER HEALING POTION", "ELIXIR OF VIGOUR", "BOMB", "FIRE SCROLL"}:
+        item_row = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item=?", (email, use_item)).fetchone()
+        if item_row is None or item_row["quantity"] < 1:
+            display_name = use_item.lower() if use_item == "BOMB" else use_item.title()
+            return f"You don't have a {display_name}. Buy one in Luminos. No daily action was used."
+    if use_item in {"BOMB", "FIRE SCROLL"} and not p["enemy_name"]:
+        return "That item can only be used during combat. No daily action was used."
     if ability and "heal" in ability and p["hp"] >= p["max_hp"]:
         return "You are already at full health. No daily action was used."
     if upper == "EXPLORE" and p["enemy_name"]:
@@ -423,27 +454,50 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
         elif item["kind"] == "mana_potion":
             conn.execute("INSERT INTO player_items(email,item,quantity) VALUES (?, ?, 1) ON CONFLICT(email,item) DO UPDATE SET quantity=quantity+1", (email, buy_item))
             result.append("You buy a mana potion. Email USE MANA POTION to restore up to 10 mana.")
-        elif item["kind"] == "bomb":
+        elif item["kind"] in {"bomb", "greater_healing_potion", "greater_mana_potion", "elixir", "fire_scroll"}:
             conn.execute("INSERT INTO player_items(email,item,quantity) VALUES (?, ?, 1) ON CONFLICT(email,item) DO UPDATE SET quantity=quantity+1", (email, buy_item))
-            result.append("You buy a bomb. During combat, email USE BOMB to deal 20 damage.")
+            item_messages = {
+                "BOMB": "You buy a bomb. During combat, email USE BOMB to deal 20 damage.",
+                "GREATER HEALING POTION": "You buy a Greater healing potion. Email USE GREATER HEALING POTION to restore up to 50 HP.",
+                "GREATER MANA POTION": "You buy a greater mana potion. Email USE GREATER MANA POTION to restore up to 20 mana.",
+                "ELIXIR OF VIGOUR": "You buy a elixir of vigour. It restores up to 25 HP and 10 mana when used.",
+                "FIRE SCROLL": "You buy a fire scroll. During combat,  email USE FIRE SCROLL to deal 35 damage.",
+            }
+            result.append(item_messages[buy_item])
         elif item["kind"] == "weapon":
             conn.execute("UPDATE players SET weapon=?, attack_bonus=? WHERE email=?", (buy_item, item["bonus"], email))
             result.append(f"You buy and equip the {buy_item.title()}. Your attacks now gain +{item['bonus']} damage.")
         elif item["kind"] == "armour":
             conn.execute("UPDATE players SET armour=?, armour_bonus=? WHERE email=?", (buy_item, item["bonus"], email))
             result.append(f"You buy and equip {buy_item.title()}. Incoming enemy hits are reduced by {item['bonus']} damage (minimum 1).")
-    elif use_item == "MANA POTION":
-        row = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item='MANA POTION'", (email,)).fetchone()
-        restored = min(10, p["max_mana"] - p["mana"])
-        conn.execute("UPDATE players SET mana=mana+? WHERE email=?", (restored, email))
-        conn.execute("UPDATE player_items SET quantity=quantity-1 WHERE email=? AND item='MANA POTION'", (email,))
-        result.append(f"You drink a mana potion and restore {restored} mana.")
-    elif upper == "USE BOMB":
-        row = conn.execute("SELECT quantity FROM player_items WHERE email=? AND item='BOMB'", (email,)).fetchone()
+    elif use_item in {"MANA POTION", "GREATER MANA POTION", "GREATER HEALING POTION", "ELIXIR OF VIGOUR"}:
+        restored_hp = 0
+        restored_mana = 0
+        if use_item == "MANA POTION":
+            restored_mana = min(10, p["max_mana"] - p["mana"])
+        elif use_item == "GREATER MANA POTION":
+            restored_mana = min(20, p["max_mana"] - p["mana"])
+        elif use_item == "GREATER HEALING POTION":
+            restored_hp = min(50, p["max_hp"] - p["hp"])
+        else:
+            restored_hp = min(25, p["max_hp"] - p["hp"])
+            restored_mana = min(10, p["max_mana"] - p["mana"])
+        conn.execute("UPDATE players SET hp=hp+?, mana=mana+? WHERE email=?", (restored_hp, restored_mana, email))
+        conn.execute("UPDATE player_items SET quantity=quantity-1 WHERE email=? AND item=?", (email, use_item))
+        if use_item == "MANA POTION":
+            result.append(f"You drink a mana potion and restore {restored_mana} mana.")
+        else:
+            result.append(f"You use {use_item.title()} and restore {restored_hp} HP and {restored_mana} mana.")
+    elif upper in {"USE BOMB", "USE FIRE SCROLL"}:
+        item_name = "BOMB" if upper == "USE BOMB" else "FIRE SCROLL"
+        item_damage = 20 if item_name == "BOMB" else 35
         enemy_name = p["enemy_name"]
-        enemy_hp = max(0, p["enemy_hp"] - 20)
-        conn.execute("UPDATE player_items SET quantity=quantity-1 WHERE email=? AND item='BOMB'", (email,))
-        result.append(f"You throw a bomb at the {enemy_name}, dealing 20 damage.")
+        enemy_hp = max(0, p["enemy_hp"] - item_damage)
+        conn.execute("UPDATE player_items SET quantity=quantity-1 WHERE email=? AND item=?", (email, item_name))
+        if item_name == "BOMB":
+            result.append(f"You throw a bomb at the {enemy_name}, dealing {item_damage} damage.")
+        else:
+            result.append(f"You use a fire scroll against the {enemy_name}, dealing {item_damage} damage.")
         if enemy_hp <= 0:
             _, _, _, xp_reward, gold_reward = ENEMY_BY_NAME[enemy_name]
             conn.execute("UPDATE players SET enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=gold+? WHERE email=?", (gold_reward, email))
