@@ -67,6 +67,12 @@ ENEMIES = [
     ("Wraith", 48, 16, 46, 29),
     ("Ogre", 65, 17, 52, 33),
     ("Young Dragon", 80, 20, 75, 50),
+    ("Marsh Lurker", 36, 10, 27, 17),
+    ("Bog Witch", 44, 13, 38, 25),
+    ("Ember Drow", 58, 16, 48, 32),
+    ("Crystal Golem", 72, 18, 60, 38),
+    ("Ash Scorpion", 68, 19, 63, 42),
+    ("Sky Raptor", 76, 20, 68, 45)
 ]
 ENEMY_MIN_LEVEL = {
     "Goblin": 1,
@@ -74,12 +80,18 @@ ENEMY_MIN_LEVEL = {
     "Bandit": 1,
     "Skeleton": 2,
     "Giant Spider": 2,
+    "Marsh Lurker": 2,
+    "Bog Witch": 3,
     "Dire Wolf": 3,
     "Orc Brute": 3,
     "Dark Mage": 4,
+    "Ember Drow": 5,
     "Troll": 5,
     "Wraith": 6,
+    "Crystal Golem": 6,
     "Ogre": 7,
+    "Ash Scorpion": 7,
+    "Sky Raptor": 8,
     "Young Dragon": 9,
 }
 ENEMY_BY_NAME = {enemy[0]: enemy for enemy in ENEMIES}
@@ -135,6 +147,36 @@ LOCATIONS = {
         "enemies": {"Dire Wolf", "Orc Brute", "Dark Mage", "Troll", "Ogre", "Wraith"},
         "explore_text": "You climb a narrow trail through the freezing mountain pass",
     },
+    "Sunken Marsh": {
+        "min_level": 2,
+        "description": "a mist-covered swamp of sinking paths and strange, eerie lights",
+        "enemies": ("Marsh Lurker", "Bog Witch", "Giant Spider", "Forest Wolf"),
+        "explore_text": "You weave your way through the chillingly cold waters of the Sunken Marsh",
+    },
+    "Ember Coast": {
+        "min_level": 5,
+        "description": "a volcanic shoreline of black sand, boiling hot springs and ash",
+        "enemies": ("Ember Drow", "Troll", "Ogre", "Dark Mage"),
+        "explore_text": "Heat rolls across the black sands of the Ember Coast",
+    },
+    "Crystal Caverns": {
+        "min_level": 6,
+        "description": "glittering underground halls, guarded by living crystals",
+        "enemies": ("Crystal Golem", "Giant Spider", "Wraith", "Dark Mage"),
+        "explore_text": "Coloured light dances across the walls of the Crystal Caverns",
+    },
+    "Ashen Wastes": {
+        "min_level": 7,
+        "description": "a ruined wasteland buried beneath ancient volcanic ash",
+        "enemies": ("Ash Scorpion", "Ogre", "Wraith", "Ember Drow"),
+        "explore_text": "Ash swirls around your boots in the silent and spooky Ashen Wastes",
+    },
+    "Skyreach Peaks": {
+        "min_level": 8,
+        "description": "towering cliffs and narrow paths above the clouds",
+        "enemies": ("Sky Raptor", "Ogre", "Wraith"),
+        "explore_text": "You climb the thin trail high into the winds of Skyreach Peaks",
+    },
     "Dragon's Lair": {
         "min_level": 9,
         "description": "a scorched cavern deep beneath a fiery volcano",
@@ -160,7 +202,67 @@ LOCATION_ALIASES = {
     "DRAGONS LAIR": "Dragon's Lair",
     "DRAGON LAIR": "Dragon's Lair",
     "DRAGON": "Dragon's Lair",
+    "SUNKEN MARSH": "Sunken Marsh",
+    "MARSH": "Sunken Marsh",
+    "SWAMP": "Sunken Marsh",
+    "EMBER COAST": "Ember Coast",
+    "COAST": "Ember Coast",
+    "CRYSTAL CAVERNS": "Crystal Caverns",
+    "CRYSTAL CAVE": "Crystal Caverns",
+    "ASHEN WASTES": "Ashen Wastes",
+    "WASTES": "Ashen Wastes",
+    "SKYREACH PEAKS": "Skyreach Peaks",
+    "SKYREACH": "Skyreach Peaks",
+    "PEAKS": "Skyreach Peaks",
 }
+
+QUESTS = {
+    "GOBLIN MENACE": {"description": "Defeat 3 Goblins in any zone.", "targets": {"Goblin": 3}, "gold": 30, "xp": 25, "zone": "Whistling Woods"},
+    "WEB OF TROUBLE": {"description": "Defeat 2 Giant Spiders.", "targets": {"Giant Spider": 2}, "gold": 40, "xp": 30, "zone": "Goblin Caves"},
+    "RESTLESS DEAD": {"description": "Defeat 3 Skeletons.", "targets": {"Skeleton": 3}, "gold": 55, "xp": 45, "zone": "Haunted Ruins"},
+    "MARSH MYSTERY": {"description": "Defeat 3 Marsh Lurkers.", "targets": {"Marsh Lurker": 3}, "gold": 65, "xp": 50, "zone": "Sunken Marsh"},
+    "HEART OF THE MOUNTAIN": {"description": "Defeat 2 Trolls.", "targets": {"Troll": 2}, "gold": 80, "xp": 65, "zone": "Frostfang Mountain"},
+    "CRYSTAL CLEANUP": {"description": "Defeat 2 Crystal Golems.", "targets": {"Crystal Golem", 2}, "gold": 95, "xp": 75, "zone": "Crystal Caverns"},
+    "ASHES TO ASHES": {"description": "Defeat 2 Ash Scorpions.", "targets": {"Ash Scorpion", 2}, "gold": 110, "xp": 90, "zone": "Ashen Wastes"},
+    "THE SKY HUNTER": {"description": "Defeat 2 Sky Raptors.", "targets": {"Sky Raptor", 2}, "gold": 125, "xp": 100, "zone": "Skyreach Peaks"},
+    "DRAGONS BANE": {"description": "Defeat a Young Dragon.", "targets": {"Young Dragon": 1}, "gold": 200, "xp": 150, "zone": "Dragon's Lair"},
+}
+
+def _quests(conn, email: str) -> str:
+    rows = {row["quest_id"]: row for row in conn.execute("SELECT * FROM player_quests WHERE email=?", (email,)).fetchall()}
+    lines = ["Luminos Quest Board (QUESTS is Free):"]
+    for name, quest in QUESTS.items():
+        row = rows.get(name)
+        if row and row["status"] == "completed":
+            state = "COMPLETED"
+        elif row and row["status"] == "active":
+            state = f"ACTIVE ({row['progress']}/{sum(quest['targets'].values())} defeats)"
+        else:
+            state = f"AVAILABLE - suggested zone: {quest['zone']}"
+        lines.append(f"- {name.title()} [{state}] - {quest['description']} Reward: {quest['gold']} gold, {quest['xp']} XP.")
+    lines.append("\nAccept a quest by emailing ACCEPT followed by its name, e.g. ACCEPT GOBLIN MENACE. You can have multiple active quests")
+    return "\n".join(lines)
+
+def _record_quest_kill(conn, email: str, enemy_name: str) -> list[str]:
+    messages = []
+    row = conn.execute("SELECT * FROM player_quests WHERE email=? AND status='active'", (email,)).fetchall()
+    for row in rows:
+        quest = QUESTS.get(row["quest_id"])
+        if not quest or enemy_name not in quest["targets"]:
+            continue
+        progress = min(sum(quest["targets"].values()), row["progress"] + 1)
+        if progress >= sum(quest["targets"].values()):
+            conn.execute("UPDATE player_quests SET progress=?, status='completed' WHERE email=? AND quest_id=?", (progress, email, row["quest_id"]))
+            conn.execute("UPDATE players SET gold=gold+? WHERE email=?", (quest["gold"], email))
+            player = conn.execute("SELECT * FROM players WHERE email=?", (email,)).fetchone()
+            level_message = _level_up(conn, player, quest["xp"])
+            messages.append(f"QUEST COMPLETE: {row['quest_id'].title()}! Reward: {quest['gold']} gold and {quest['xp']} XP.")
+            if level_message:
+                messages.append(level_message)
+        else:
+            conn.execute("UPDATE player_quests SET progress=? WHERE email=? AND quest_id=?", (progress, email, row["quest_id"]))
+            messages.append(f"Quest progress - {row['quest_id'].title()}: {progress}/{sum(quest['targets'].values())} defeats.")
+    return messages
 
 def local_date(timezone_name: str = "Australia/Adelaide") -> str:
     try:
@@ -199,6 +301,8 @@ def _help() -> str:
             "TRAVEL <location> - move to another area (uses today's action)\n"
             "MAP or LOCATIONS - see destinations and level requirements\n"
             "ABILITIES or SPELLS - list your class abilities (free)\n"
+            "QUESTS - list available, active and completed quests (free)\n"
+            "ACCEPT <quest> - accept a quest (free)\n"
             "CAST <name> or ABILITY <name> - use a class ability in combat\n"
             "STATUS or INVENTORY - free, do not use your daily action\n\n"
             "Destinations: Luminos, Whistling Woods, Goblin Caves, Haunted Ruins, Frostfang Mountains, Dragon's Lair.\n"
@@ -341,6 +445,21 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
     if use_item and use_item not in usable_items:
         return "You can use MANA POTION, GREATER MANA POTION, GREATER HEALING POTION, ELIXIR OF VIGOUR, BOMB or FIRE SCROLL. Healing potions can also be used with POTION. No daily action was used."
 
+    accept_quest = upper[7:].strip() if upper.startswith("ACCEPT ") else None
+    if upper == "ACCEPT":
+        return "Which quest would you like to accept? Email QUESTS for the list, then ACCEPT followed by the quest name. No daily action was used."
+    if accept_quest:
+        if accept_quest not in QUESTS:
+            return f"I don't recognise that quest '{accept_quest}'. Email QUESTS to see the quest board. No daily action was used."
+        existing = conn.execute("SELECT status FROM player_quests WHERE email=? AND quest_id=?", (email, accept_quest)).fetchone()
+        if existing and existing["status"] == "completed":
+            return "You have already completed that quest. Email QUESTS to choose another. No daily action was used."
+        if existing and existing["status"] == "active":
+            return "You have already accepted that quest. Email QUESTS to check progress. No daily action was used."
+        conn.execute("INSERT INTO player_quests(email, quest_id, status, progress) VALUES (?, ?, 'active', 0) ON CONFLICT(email, quest_id) DO UPDATE SET STATUS='active', progress=0", (email, accept_quest))
+        quest = QUESTS[accept_quest]
+        return f"Quest accepted: {accept_quest.title()}! {quest['description']} Suggested zone: {quest['zone']}. Reward: {quest['gold']} gold and {quest['xp']} XP. QUest acceptance is free; your daily action is unchanged."
+
     travel_destination = None
     if upper.startswith("TRAVEL "):
         requested_destination = upper[len("TRAVEL "):].strip().replace("'", "'")
@@ -364,7 +483,7 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
         return f"You need {ability['mana']} mana to use {ability_name}, but have {p['mana']}. REST to recover mana. No daily action was used."
 
     # Check whether this command is valid in the current situation before spending the daily turn.
-    if (upper in {"ATTACK", "DEFEND", "POTION", "FLEE", "USE BOMB"} or ability_name) and not p["enemy_name"]:
+    if (upper in {"ATTACK", "DEFEND", "POTION", "FLEE", "USE BOMB", "USE FIRE SCROLL"} or ability_name) and not p["enemy_name"]:
         return "There is no enemy here right now. Reply EXPLORE to look for an adventure. No daily action was used."
     if buy_item and p["location"] != "Luminos":
         return "You must be in ELuminos to shop. Email TRAVEL LUMINOS to return. No daily action was used."
@@ -505,6 +624,7 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
             level_msg = _level_up(conn, p, xp_reward)
             if level_msg:
                 result.append(level_msg)
+            result.extend(_record_quest_kill(conn, email, enemy_name))
         else:
             damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) - p["armour_bonus"])
             new_hp = max(0, p["hp"] - damage_taken)
@@ -550,6 +670,7 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
             level_msg = _level_up(conn, p, xp_reward)
             if level_msg:
                 result.append(level_msg)
+            result.extend(_record_quest_kill(conn, email, enemy_name))
         else:
             current_hp = conn.execute("SELECT hp FROM players WHERE email=?", (email,)).fetchone()["hp"]
             damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) - p["armour_bonus"])

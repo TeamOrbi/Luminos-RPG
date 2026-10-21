@@ -3,7 +3,7 @@ import unittest
 from unittest.mock import patch
 
 from database import SCHEMA
-from game_engine import ABILITIES, CLASSES, ENEMIES, ENEMY_MIN_LEVEL, LOCATION, handle_email
+from game_engine import ABILITIES, CLASSES, ENEMIES, ENEMY_MIN_LEVEL, LOCATIONS, handle_email
 
 
 class GameEngineTests(unittest.TestCase):
@@ -194,7 +194,8 @@ class GameEngineTests(unittest.TestCase):
         self.send("shopper@example.com", "BUY MANA POTION")
         self.conn.execute("UPDATE players SET last_action_date='2000-01-01' WHERE email='shopper@example.com'")
         response = self.send("shopper@example.com", "USE MANA POTION")
-        player = self.conn.execute("SELECT mana FROM players WHERE email='shopper@example.com' AND item='MANA POTION'").fetchone()
+        player = self.conn.execute("SELECT mana FROM players WHERE email='shopper@example.com'").fetchone()
+        item = self.conn.execute("SELECT quantity FROM player_items WHERE email='shopper@example.com' AND item='MANA POTION'").fetchone()
         self.assertIn("restore 10 mana", response)
         self.assertEqual(player["mana"], 11)
         self.assertEqual(item["quantity"], 0)
@@ -209,7 +210,7 @@ class GameEngineTests(unittest.TestCase):
         response = self.send("bomb@example.com", "USE BOMB")
         self.assertIn("don't have a bomb", response)
 
-    def test_advanced_abilites_exist_for_all_classes(self):
+    def test_advanced_abilities_exist_for_all_classes(self):
         for player_class in CLASSES:
             class_abilities = [a for a in ABILITIES.values() if a["class"] == player_class]
             self.assertGreaterEqual(len(class_abilities), 4)
@@ -256,6 +257,46 @@ class GameEngineTests(unittest.TestCase):
         self.assertEqual(player["enemy_hp"], 65)
         self.assertEqual(item["quantity"], 0)
 
+
+    def test_new_zones_have_level_requirements_and_enemies(self):
+        for zone in ("Sunken Marsh", "Ember Coast", "Crystal Caverns", "Ashen Wastes", "Skyreach Peaks"):
+            self.assertIn(zone, LOCATIONS)
+            self.assertGreaterEqual(LOCATIONS[zone]["min_level"], 2)
+            self.assertTrue(LOCATIONS[zone]["enemies"])
+        self.assertIn("Marsh Lurker", ENEMY_MIN_LEVEL)
+        self.assertIn("Sky Griffin", ENEMY_MIN_LEVEL)
+
+    def test_quests_can_be_listed_and_accepted_without_using_daily_action(self):
+        self.create_player("quester@example.com", "Aria", "MAGE")
+        board = self.send("quester@example.com", "QUESTS")
+        self.assertIn("GOBLIN MENACE", board.upper())
+        response = self.send("quester@example.com", "ACCEPT GOBLIN MENACE")
+        self.assertIn("Quest accepted", response)
+        player = self.conn.execute("SELECT last_action_date FROM players WHERE email='quester@example.com'").fetchone()
+        quest = self.conn.execute("SELECT status, progress FROM player_quests WHERE email='quester@example.com'").fetchone()
+        self.assertIsNone(player["last_action_date"])
+        self.assertEqual((quest["status"], quest["progress"]), ("active", 0))
+
+    def test_quest_progress_and_rewards_on_enemy_defeat(self):
+        self.create_player("quester@example.com", "Aria", "WARRIOR")
+        self.send("quester@example.com", "ACCEPT GOBLIN MENACE")
+        self.conn.execute("UPDATE player_quests SET progress=2 WHERE email='quester@example.com' AND quest_id='GOBLIN MENACE'")
+        self.conn.execute("UPDATE players SET gold=0, enemy_name='Goblin', enemy_hp=1, enemy_attack=1 WHERE email='quester@example.com'")
+        with patch("game_engine.random.randint", return_value=20):
+            response = self.send("quester@example.com", "ATTACK")
+        quest = self.conn.execute("SELECT status, progress FROM player_quests WHERE email='quester@example.com' AND quest_id='GOBLIN MENACE'").fetchone()
+        player = self.conn.execute("SELECT gold FROM players WHERE email='quester@example.com'").fetchone()
+        self.assertIn("QUEST COMPLETE", response)
+        self.assertEqual((quest["status"], quest["progress"]), ("completed", 3))
+        self.assertGreaterEqual(player["gold"], 38)
+
+    def test_unaccepted_quest_does_not_track_kills(self):
+        self.create_player("quester@example.com", "Aria", "WARRIOR")
+        self.conn.execute("UPDATE players SET enemy_name='Goblin', enemy_hp=1, enemy_attack=1 WHERE email='quester@example.com'")
+        with patch("game_engine.random.randint", return_value=20):
+            self.send("quester@example.com", "ATTACK")
+        row = self.conn.execute("SELECT * FROM player_quests WHERE email='quester@example.com'").fetchone()
+        self.assertIsNone(row)
 
 if __name__ == '__main__':
     unittest.main()

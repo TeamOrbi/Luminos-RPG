@@ -39,6 +39,15 @@ CREATE TABLE IF NOT EXISTS player_items (
     PRIMARY KEY (email, item),
     FOREIGN KEY (email) REFERENCES players(email) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS player_quests (
+    email TEXT NOT NULL,
+    quest_id TEXT NOT NULL,
+    status TEXT NOT NULL DEFAULT 'active',
+    progress INTEGER NOT NULL DEFAULT 0,
+    accepted_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (email, quest_id),
+    FOREIGN KEY(email) REFERENCES players(email) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS processed_messages (
     message_id TEXT PRIMARY KEY,
     processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
@@ -46,7 +55,7 @@ CREATE TABLE IF NOT EXISTS processed_messages (
 """
 
 def connect() -> sqlite3.Connection:
-    Path(DB_PATH).parent.mkdir(parents=true, exist_ok=True)
+    Path(DB_PATH).parent.mkdir(parents=True, exist_ok=True)
     conn = sqlite3.connect(DB_PATH, timeout=15)
     conn.row_factory = sqlite3.Row
     conn.execute("PRAGMA foreign_keys = ON")

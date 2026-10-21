@@ -1,10 +1,10 @@
 services:
   luminos:
-    build: 
-      container_name: luminos-rpg-server
-      restart: unless-stopped
-      env_file: .env
-      ports:
-        - "127.0.0.1:8000:8000"
-      volumes:
-        - ./data:/app/data
+    build: .
+    container_name: luminos-rpg-server
+    restart: unless-stopped
+    env_file: .env
+    ports:
+      - "127.0.0.1:8000:8000"
+    volumes:
+      - ./data:/app/data
