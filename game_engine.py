@@ -5,6 +5,10 @@ import re
 from datetime import datetime
 from zoneinfo import ZoneInfo
 
+# Battle Accuracy, enemy miss chance
+PLAYER_MISS_CHANCE = 0.10
+ENEMY_MISS_CHANCE = 0.15
+
 CLASSES = {
     "WARRIOR": {"hp": 42, "mana": 3, "attack": 11, "description": "tough, with strong attacks"},
     "MAGE": {"hp": 28, "mana": 12, "attack": 16, "description": "fragile, with powerful magic"},
@@ -225,7 +229,7 @@ QUESTS = {
     "CRYSTAL CLEANUP": {"description": "Defeat 2 Crystal Golems.", "targets": {"Crystal Golem", 2}, "gold": 95, "xp": 75, "zone": "Crystal Caverns"},
     "ASHES TO ASHES": {"description": "Defeat 2 Ash Scorpions.", "targets": {"Ash Scorpion", 2}, "gold": 110, "xp": 90, "zone": "Ashen Wastes"},
     "THE SKY HUNTER": {"description": "Defeat 2 Sky Raptors.", "targets": {"Sky Raptor", 2}, "gold": 125, "xp": 100, "zone": "Skyreach Peaks"},
-    "DRAGONS BANE": {"description": "Defeat a Young Dragon.", "targets": {"Young Dragon": 1}, "gold": 200, "xp": 150, "zone": "Dragon's Lair"},
+    "DRAGON BANE": {"description": "Defeat a Young Dragon.", "targets": {"Young Dragon": 1}, "gold": 200, "xp": 150, "zone": "Dragon's Lair"},
 }
 
 def _quests(conn, email: str) -> str:
@@ -420,6 +424,8 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
     if upper in FREE_COMMANDS:
         if upper == "HELP":
             return _help()
+        if upper == "QUESTS":
+            return _quests(conn, email)
         if upper == "SHOP":
             if p["location"] != "Luminos":
                 return "The market is in Luminos. Email TRAVEL LUMINOS to head over there, then SHOP. No daily acton was used."
@@ -611,9 +617,12 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
         item_name = "BOMB" if upper == "USE BOMB" else "FIRE SCROLL"
         item_damage = 20 if item_name == "BOMB" else 35
         enemy_name = p["enemy_name"]
-        enemy_hp = max(0, p["enemy_hp"] - item_damage)
+        missed = random.random() < PLAYER_MISS_CHANCE
+        enemy_hp = p["enemy_hp"] if missed else max(0, p["enemy_hp"] - item_damage)
         conn.execute("UPDATE player_items SET quantity=quantity-1 WHERE email=? AND item=?", (email, item_name))
-        if item_name == "BOMB":
+        if missed:
+            result.append(f"Your {item_name.lower()} misses the {enemy_name}! Your action HAS been used.")
+        elif item_name == "BOMB":
             result.append(f"You throw a bomb at the {enemy_name}, dealing {item_damage} damage.")
         else:
             result.append(f"You use a fire scroll against the {enemy_name}, dealing {item_damage} damage.")
@@ -626,13 +635,17 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
                 result.append(level_msg)
             result.extend(_record_quest_kill(conn, email, enemy_name))
         else:
-            damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) - p["armour_bonus"])
-            new_hp = max(0, p["hp"] - damage_taken)
-            conn.execute("UPDATE players SET enemy_hp=?, hp=? WHERE email=?", (enemy_hp, new_hp, email))
-            result.append(f"The {enemy_name} hits back for {damage_taken} damage. You have {new_hp}/{p['max_hp']} HP left.")
-            if new_hp == 0:
-                conn.execute("UPDATE players SET hp=?, enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=MAX(0, gold-3), location='Luminos' WHERE email=?", (max(1, p['max_hp']//2), email))
-                result.append("You collapse and are carried back to Luminos, recovering to half health and losing 3 gold.")
+            if random.random() < ENEMY_MISS_CHANCE:
+                conn.execute("UPDATE players SET enemy_hp=? WHERE email=?", (enemy_hp, email))
+                result.append(f"The {enemy_name} attacks but misses you!")
+            else:
+                damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) - p["armour_bonus"])
+                new_hp = max(0, p["hp"] - damage_taken)
+                conn.execute("UPDATE players SET enemy_hp=?, hp=? WHERE email=?", (enemy_hp, new_hp, email))
+                result.append(f"The {enemy_name} hits back for {damage_taken} damage. You have {new_hp}/{p['max_hp']} HP left.")
+                if new_hp == 0:
+                    conn.execute("UPDATE players SET hp=?, enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=MAX(0, gold-3), location='Luminos' WHERE email=?", (max(1, p['max_hp']//2), email))
+                    result.append("You collapse and are carried back to Luminos, recovering to half health and losing 3 gold.")
     elif upper == "ATTACK" or ability_name:
         base = CLASSES[p["class"]]["attack"] + p["level"] - 1 + p["attack_bonus"]
         if ability_name:
@@ -644,23 +657,29 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
                 restored = min(ability["heal"], p["max_hp"] - current_hp)
                 conn.execute("UPDATE players SET hp=hp+? WHERE email=?", (restored, email))
                 result.append(f"You recover {restored} HP.")
-            if "damage" in ability:
-                result.append(f"Your ability hits the {p['enemy_name']} for {damage} damage.")
         else:
             damage = random.randint(max(2, base - 3), base + 2)
-        enemy_hp = max(0, p["enemy_hp"] - damage)
-        if ability and ability.get("weaken") and enemy_hp > 0:
+
+        has_attack_damage = not ability_name or "damage" in ability
+        missed = has_attack_damage and random.random() < PLAYER_MISS_CHANCE
+        enemy_hp = p["enemy_hp"] if missed else max(0, p["enemy_hp"] - damage)
+        if missed:
+            result.append(f"Your {ability_name.title() if ability_name else 'attack'} misses the {p['enemy_name']}!")
+        elif ability_name and "damage" in ability:
+            result.append(f"Your ability hits the {p['enemy_name']} for {damage} damage.")
+        elif not ability_name:
+            result.append(f"You attack the {p['enemy_name']} for {damage} damage.")
+
+        if not missed and ability and ability.get("weaken") and enemy_hp > 0:
             weakened_attack = max(1, p["enemy_attack"] - ability["weaken"])
             conn.execute("UPDATE players SET enemy_attack=? WHERE email=?", (weakened_attack, email))
-            result.append(f"The trap weakens the enemy's attack to {weakened_attack}.")
-        if ability and ability.get("drain"):
+            result.append(f"The ability weakens the enemy's attack to {weakened_attack}.")
+        if not missed and ability and ability.get("drain"):
             current_hp = conn.execute("SELECT hp FROM players WHERE email=?", (email,)).fetchone()["hp"]
             restored = min(ability["drain"], p["max_hp"] - current_hp)
             if restored:
                 conn.execute("UPDATE players SET hp=hp+? WHERE email=?", (restored, email))
                 result.append(f"You drain {restored} HP from the enemy.")
-        if not ability_name:
-            result.append(f"You attack the {p['enemy_name']} for {damage} damage.")
         if enemy_hp <= 0:
             enemy_name = p["enemy_name"]
             # Rewards for enemy drops come from enemy def, new enemies need no extra code.
@@ -672,22 +691,29 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
                 result.append(level_msg)
             result.extend(_record_quest_kill(conn, email, enemy_name))
         else:
-            current_hp = conn.execute("SELECT hp FROM players WHERE email=?", (email,)).fetchone()["hp"]
-            damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) - p["armour_bonus"])
-            new_hp = max(0, current_hp - damage_taken)
-            conn.execute("UPDATE players SET enemy_hp=?, hp=? WHERE email=?", (enemy_hp, new_hp, email))
-            result.append(f"The {p['enemy_name']} hits back for {damage_taken} damage. You have {new_hp}/{p['max_hp']} HP left.")
+            if random.random() < ENEMY_MISS_CHANCE:
+                conn.execute("UPDATE players SET enemy_hp=? WHERE email=?", (enemy_hp, email))
+                result.append(f"The {p['enemy_name']} attacks but misses you!")
+            else:
+                current_hp = conn.execute("SELECT hp FROM players WHERE email=?", (email,)).fetchone()["hp"]
+                damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) - p["armour_bonus"])
+                new_hp = max(0, current_hp - damage_taken)
+                conn.execute("UPDATE players SET enemy_hp=?, hp=? WHERE email=?", (enemy_hp, new_hp, email))
+                result.append(f"The {p['enemy_name']} hits back for {damage_taken} damage. You have {new_hp}/{p['max_hp']} HP left.")
+                if new_hp == 0:
+                    conn.execute("UPDATE players SET hp=?, enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=MAX(0, gold-3), location='Luminos' WHERE email=?", (max(1, p["max_hp"] // 2), email))
+                    result.append("You collapse and are carried back to town. You recover half health and lose 3 gold, but your adventure... continues.")
+    elif upper == "DEFEND":
+        if random.random() < ENEMY_MISS_CHANCE:
+            result.append(f"The {p['enemy_name']} attacks, but your defence and quick reflexes help you avoid the blow!")
+        else:
+            damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) // 2 - p["armour_bonus"])
+            new_hp = max(0, p["hp"] - damage_taken)
+            conn.execute("UPDATE players SET hp=? WHERE email=?", (new_hp, email))
+            result.append(f"You brace for the attack and take only {damage_taken} damage. Health: {new_hp}/{p['max_hp']}.")
             if new_hp == 0:
                 conn.execute("UPDATE players SET hp=?, enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=MAX(0, gold-3), location='Luminos' WHERE email=?", (max(1, p["max_hp"] // 2), email))
                 result.append("You collapse and are carried back to town. You recover half health and lose 3 gold, but your adventure... continues.")
-    elif upper == "DEFEND":
-        damage_taken = max(1, random.randint(1, max(2, p["enemy_attack"])) // 2 - p["armour_bonus"])
-        new_hp = max(0, p["hp"] - damage_taken)
-        conn.execute("UPDATE players SET hp=? WHERE email=?", (new_hp, email))
-        result.append(f"You brace for the attack and take only {damage_taken} damage. Health: {new_hp}/{p['max_hp']}.")
-        if new_hp == 0:
-            conn.execute("UPDATE players SET hp=?, enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=MAX(0, gold-3), location='Luminos' WHERE email=?", (max(1, p["max_hp"] // 2), email))
-            result.append("You collapse and are carried back to town. You recover half health and lose 3 gold, but your adventure... continues.")
     elif upper == "POTION":
         restored = min(25, p["max_hp"] - p["hp"])
         new_hp = p["hp"] + restored

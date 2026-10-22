@@ -290,6 +290,37 @@ class GameEngineTests(unittest.TestCase):
         self.assertEqual((quest["status"], quest["progress"]), ("completed", 3))
         self.assertGreaterEqual(player["gold"], 38)
 
+    def test_player_attack_can_miss_and_enemy_can_still_hit(self):
+        self.create_player("miss@example.com", "Aria", "WARRIOR")
+        self.conn.execute("UPDATE players SET enemy_name='Goblin', enemy_hp=100, enemy_attack=8 WHERE email='miss@example.com'")
+        with patch("game_engine.random.randint", return_value=10), patch("game_engine.random.random", side_effect=[0.0, 0.99]):
+            response = self.send("miss@example.com", "ATTACK")
+        player = self.conn.execute("SELECT hp, enemy_hp FROM players WHERE email='miss@example.com'").fetchone()
+        self.assertIn("Your attack misses the Goblin", response)
+        self.assertIn("hits back", response)
+        self.assertEqual(player["enemy_hp"], 100)
+        self.assertLess(player["hp"], CLASSES["WARRIOR"]["hp"])
+
+    def test_enemy_attack_can_miss_after_player_hits(self):
+        self.create_player("dodge@example.com", "Borin", "WARRIOR")
+        self.conn.execute("UPDATE players SET enemy_name='Goblin', enemy_hp=100, enemy_attack=8 WHERE email='dodge@example.com'")
+        with patch("game_engine.random.randint", return_value=10), patch("game_engine.random.random", side_effect=[0.99, 0.0]):
+            response = self.send("dodge@example.com", "ATTACK")
+        player = self.conn.execute("SELECT hp, enemy_hp FROM players WHERE email='dodge@example.com'").fetchone()
+        self.assertIn("You attack the Goblin", response)
+        self.assertIn("attacks but misses you", response)
+        self.assertEqual(player["hp"], CLASSES["WARRIOR"]["hp"])
+        self.assertLess(player["enemy_hp"], 100)
+
+    def test_defend_can_avoid_all_damage_when_enemy_misses(self):
+        self.create_player("defend@example.com", "Cora", "PALADIN")
+        self.conn.execute("UPDATE players SET enemy_name='Goblin', enemy_hp=100, enemy_attack=8 WHERE email='defend@example.com'")
+        with patch("game_engine.random.random", return_value=0.0):
+            response = self.send("defend@example.com", "DEFEND")
+        player = self.conn.execute("SELECT hp FROM players WHERE email='defend@example.com'").fetchone()
+        self.assertIn("avoid the blow", response)
+        self.assertEqual(player["hp"], CLASSES["PALADIN"]["hp"])
+
     def test_unaccepted_quest_does_not_track_kills(self):
         self.create_player("quester@example.com", "Aria", "WARRIOR")
         self.conn.execute("UPDATE players SET enemy_name='Goblin', enemy_hp=1, enemy_attack=1 WHERE email='quester@example.com'")
