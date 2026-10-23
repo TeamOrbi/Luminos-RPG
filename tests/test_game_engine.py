@@ -329,5 +329,44 @@ class GameEngineTests(unittest.TestCase):
         row = self.conn.execute("SELECT * FROM player_quests WHERE email='quester@example.com'").fetchone()
         self.assertIsNone(row)
 
+    def test_boss_board_is_free_and_lists_all_minibosses(self):
+        self.create_player("boss@example.com", "Aria", "WARRIOR")
+        response = self.send("boss@example.com", "BOSSES")
+        self.assertIn("Thornback the Ancient", response)
+        self.assertIn("The Sand Wyrm", response)
+        self.assertIsNone(self.conn.execute("SELECT last_action_date FROM players WHERE email='boss@example.com'").fetchone()[0])
+
+    def test_challenge_requires_correct_zone_and_level_without_spending_action(self):
+        self.create_player("boss@example.com", "Aria", "WARRIOR")
+        response = self.send("boss@example.com", "CHALLENGE THORNBACK THE ANCIENT")
+        self.assertIn("can only be challenged in Moonlit Grove", response)
+        self.assertIsNone(self.conn.execute("SELECT last_action_date FROM players WHERE email='boss@example.com'").fetchone()[0])
+        self.conn.execute("UPDATE players SET location='Moonlit Grove', level=2 WHERE email='boss@example.com'")
+        response = self.send("boss@example.com", "CHALLENGE THORNBACK THE ANCIENT")
+        self.assertIn("reach level 3", response)
+        self.assertIsNone(self.conn.execute("SELECT last_action_date FROM players WHERE email='boss@example.com'").fetchone()[0])
+
+    def test_challenge_starts_miniboss_and_uses_daily_action(self):
+        self.create_player("boss@example.com", "Aria", "WARRIOR")
+        self.conn.execute("UPDATE players SET location='Moonlit Grove', level=3 WHERE email='boss@example.com'")
+        response = self.send("boss@example.com", "CHALLENGE THORNBACK THE ANCIENT")
+        self.assertIn("You challenge Thornback the Ancient", response)
+        player = self.conn.execute("SELECT enemy_name, enemy_hp, last_action_date FROM players WHERE email='boss@example.com'").fetchone()
+        self.assertEqual(player["enemy_name"], "Thornback the Ancient")
+        self.assertGreater(player["enemy_hp"], 0)
+        self.assertIsNotNone(player["last_action_date"])
+
+    def test_defeated_miniboss_is_saved_and_cannot_be_challenged_again(self):
+        self.create_player("boss@example.com", "Aria", "WARRIOR")
+        self.conn.execute("UPDATE players SET location='Moonlit Grove', level=3, enemy_name='Thornback the Ancient', enemy_hp=1, enemy_attack=1, last_action_date=NULL WHERE email='boss@example.com'")
+        with patch("game_engine.random.randint", return_value=100), patch("game_engine.random.random", return_value=0.99):
+            response = self.send("boss@example.com", "ATTACK")
+        self.assertIn("MINI-BOSS VICTORY", response)
+        saved = self.conn.execute("SELECT boss_id FROM player_bosses WHERE email='boss@example.com'").fetchone()
+        self.assertEqual(saved["boss_id"], "THORNBACK THE ANCIENT")
+        self.conn.execute("UPDATE players SET last_action_date=NULL, enemy_name=NULL WHERE email='boss@example.com'")
+        blocked = self.send("boss@example.com", "CHALLENGE THORNBACK THE ANCIENT")
+        self.assertIn("already defeated", blocked)
+
 if __name__ == '__main__':
     unittest.main()

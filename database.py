@@ -48,6 +48,13 @@ CREATE TABLE IF NOT EXISTS player_quests (
     PRIMARY KEY (email, quest_id),
     FOREIGN KEY(email) REFERENCES players(email) ON DELETE CASCADE
 );
+CREATE TABLE IF NOT EXISTS player_bosses (
+    email TEXT NOT NULL,
+    boss_id TEXT NOT NULL,
+    defeated_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (email, boss_id),
+    FOREIGN KEY(email) REFERENCES players(email) ON DELETE CASCADE
+);
 CREATE TABLE IF NOT EXISTS processed_messages (
     message_id TEXT PRIMARY KEY,
     processed_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP

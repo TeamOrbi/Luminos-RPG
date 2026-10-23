@@ -76,7 +76,17 @@ ENEMIES = [
     ("Ember Drow", 58, 16, 48, 32),
     ("Crystal Golem", 72, 18, 60, 38),
     ("Ash Scorpion", 68, 19, 63, 42),
-    ("Sky Raptor", 76, 20, 68, 45)
+    ("Sky Raptor", 76, 20, 68, 45),
+    ("Thorn Stag", 43, 12, 34, 22),
+    ("Sand Scorpion", 62, 17, 52, 34),
+    ("Storm Harpy", 78, 21, 72, 48),
+    ("Void Sentinel", 92, 23, 88, 58),
+    #Mini Bosses
+    ("Thornback the Ancient", 105, 17, 90, 65),
+    ("The Sand Wyrm", 145, 23, 140, 100),
+    ("Drowned Champion", 180, 27, 190, 130),
+    ("The Storm Herald", 225, 31, 260, 180),
+
 ]
 ENEMY_MIN_LEVEL = {
     "Goblin": 1,
@@ -88,15 +98,24 @@ ENEMY_MIN_LEVEL = {
     "Bog Witch": 3,
     "Dire Wolf": 3,
     "Orc Brute": 3,
+    "Thorn Stag": 3,
+    "Thornback the Ancient": 3,
     "Dark Mage": 4,
     "Ember Drow": 5,
     "Troll": 5,
+    "Sand Scorpion": 5,
+    "The Sand Wyrm": 5,
     "Wraith": 6,
     "Crystal Golem": 6,
     "Ogre": 7,
     "Ash Scorpion": 7,
+    "Drowned Champion": 7,
     "Sky Raptor": 8,
+    "Storm Harpy": 8,
     "Young Dragon": 9,
+    "The Storm Herald": 9,
+    "Void Sentinel": 10,
+
 }
 ENEMY_BY_NAME = {enemy[0]: enemy for enemy in ENEMIES}
 SHOP_ITEMS = {
@@ -130,25 +149,31 @@ LOCATIONS = {
     "Whistling Woods": {
         "min_level": 1,
         "description": "a misty and mysterious wood, filled with old paths, and rustling trees.",
-        "enemies": {"Goblin", "Forest Wolf", "Bandit", "Dire Wolf"},
+        "enemies": ("Goblin", "Forest Wolf", "Bandit", "Dire Wolf"),
         "explore_text": "You follow a winding path beneath the whistling branches.",
     },
     "Goblin Caves": {
         "min_level": 2,
         "description": "a network of damp tunnels, spider webs and abandoned mine shafts",
-        "enemies": {"Goblin", "Skeleton", "Giant Spider", "Orc Brute", "Troll"},
+        "enemies": ("Goblin", "Skeleton", "Giant Spider", "Orc Brute", "Troll"),
         "explore_text": "Your footsteps echo through the dark caves",
     },
     "Haunted Ruins": {
         "min_level": 3,
         "description": "crumbling halls haunted by restless spirits and forgotten magic",
-        "enemies": {"Skeleton", "Bandit", "Dark Mage", "Wraith", "Ogre"},
+        "enemies": ("Skeleton", "Bandit", "Dark Mage", "Wraith", "Ogre"),
         "explore_text": "You search the shattered halls of the haunted ruins",
+    },
+    "Moonlit Grove": {
+        "min_level": 3,
+        "description": "an enchanted grove where silver leaves glow beneath the moonlight",
+        "enemies": ("Thorn Stag", "Forest Wolf", "Bog Witch", "Wraith"),
+        "explore_text": "Moonlight filters through the silver trees of the Moonlit Grove"
     },
     "Frostfang Mountains": {
         "min_level": 4,
         "description": "a frozen mountain range battered by icy winds",
-        "enemies": {"Dire Wolf", "Orc Brute", "Dark Mage", "Troll", "Ogre", "Wraith"},
+        "enemies": ("Dire Wolf", "Orc Brute", "Dark Mage", "Troll", "Ogre", "Wraith"),
         "explore_text": "You climb a narrow trail through the freezing mountain pass",
     },
     "Sunken Marsh": {
@@ -163,6 +188,12 @@ LOCATIONS = {
         "enemies": ("Ember Drow", "Troll", "Ogre", "Dark Mage"),
         "explore_text": "Heat rolls across the black sands of the Ember Coast",
     },
+    "Sunfire Desert": {
+        "min_level": 5,
+        "description": "a scorching desert of red dunes, buried ruins and shifitng sands",
+        "enemies": ("Sand Scorpion", "Bandit", "Ember Drake", "Ogre"),
+        "explore_text": "The sun beats down as you cross the shifting dunes of the Sunfire Desert",
+    },
     "Crystal Caverns": {
         "min_level": 6,
         "description": "glittering underground halls, guarded by living crystals",
@@ -174,6 +205,12 @@ LOCATIONS = {
         "description": "a ruined wasteland buried beneath ancient volcanic ash",
         "enemies": ("Ash Scorpion", "Ogre", "Wraith", "Ember Drow"),
         "explore_text": "Ash swirls around your boots in the silent and spooky Ashen Wastes",
+    },
+    "Drowned Cathedral": {
+        "min_level": 7,
+        "description": "a half-submerged cathedral filled with drowned spirits and broken bells",
+        "enemies": ("Wraith", "Ash Scorpion", "Bog Witch", "Ogre"),
+        "explore_text": "Water ripples through the silent halls of the Drowned Catherdral",
     },
     "Skyreach Peaks": {
         "min_level": 8,
@@ -187,6 +224,12 @@ LOCATIONS = {
         "enemies": {"Wraith", "Ogre", "Young Dragon"},
         "explore_text": "Heat shimmers over the scorched stone of the dragon's lair. Perils Lie Within.",
     },
+    "Stormwatch Citadel": {
+        "min_level": 9,
+        "description": "an ancient fortress above the clouds, battered by endless lightning",
+        "enemies": ("Storm Harpy", "Void Sentinel", "Sky Raptor", "Wraith"),
+        "explore_text": "Lightning flashes around the ruined towers of Stormwatch Citadel",
+    }
 }
 LOCATION_ALIASES = {
     "LUMINOS": "Luminos",
@@ -218,7 +261,28 @@ LOCATION_ALIASES = {
     "SKYREACH PEAKS": "Skyreach Peaks",
     "SKYREACH": "Skyreach Peaks",
     "PEAKS": "Skyreach Peaks",
+    "MOONLIT GROVE": "Moonlit Grove",
+    "GROVE": "Moonlit Grove",
+    "SUNFIRE DESERT": "Sunfire Desert",
+    "DESERT": "Sunfire Desert",
+    "DROWNED CATHEDRAL": "Drowned Cathedral",
+    "CATHEDRAL": "Drowned Cathedral",
+    "STORMWATCH CITADEL": "Stormwatch Citadel",
+    "CITADEL": "Stormwatch Citadel",
 }
+
+#Mini-bosses are started by the player, not randomly
+MINI_BOSSES = {
+    "THORNBACK THE ANCIENT": {"name": "Thornback the Ancient", "zone": "Moonlit Grove", "level": 3,
+                              "description": "a ancient thorn-covered guardian of the grove"},
+    "THE SAND WYRM": {"name": "The Sand Wyrm", "zone": "Sunfire Desert", "level": 5,
+                      "description": "a colossal predator that erupts from beneath the dunes"},
+    "DROWNED CHAMPION": {"name": "Drowned Champion", "zone": "Drowned Cathedral", "level": 7,
+                         "description": "a fallen knight bound to the cathedral's flooded halls"},
+    "THE STORM HERALD": {"name": "The Storm Herald", "zone": "Stormwatch Citadel", "level": 9,
+                         "description": "a storm-forged sentinel commanding the citadel's lightning"},
+}
+MINI_BOSS_BY_ENEMY = {boss["name"]: boss for boss in MINI_BOSSES.values()}
 
 QUESTS = {
     "GOBLIN MENACE": {"description": "Defeat 3 Goblins in any zone.", "targets": {"Goblin": 3}, "gold": 30, "xp": 25, "zone": "Whistling Woods"},
@@ -297,7 +361,7 @@ def _help() -> str:
             "DEFEND - reduce the next enemy hit\n"
             "POTION - restore health (if you have one)\n"
             "SHOP - browse the Luminos market (free)\n"
-            "BUY <item> - purchase a item in Luminos (uses today's action\n"
+            "BUY <item> - purchase a item in Luminos\n"
             "USE MANA POTION - restore mana"
             "USE BOMB - deal damage during combat"
             "FLEE - leave a fight\n"
@@ -306,6 +370,8 @@ def _help() -> str:
             "MAP or LOCATIONS - see destinations and level requirements\n"
             "ABILITIES or SPELLS - list your class abilities (free)\n"
             "QUESTS - list available, active and completed quests (free)\n"
+            "BOSSES - list mini-bosses and their status (free)\n"
+            "CHALLENGE <boss> - start a mini-boss fight in its zone\n"
             "ACCEPT <quest> - accept a quest (free)\n"
             "CAST <name> or ABILITY <name> - use a class ability in combat\n"
             "STATUS or INVENTORY - free, do not use your daily action\n\n"
@@ -346,6 +412,16 @@ def _abilities(p) -> str:
             effect += f" and heals up to {data['drain']} HP"
         lines.append(f"- {name} - {effect}; costs {data['mana']} mana; {state}")
     lines.append("\nIn combat, email CAST FIREBALL (or ABILITY POWER STRIKE). Ability use consumes your daily action.")
+    return "\n".join(lines)
+
+def _bosses(conn, email: str) -> str:
+    defeated = {row[0] for row in conn.execute(
+        "SELECT boss_id FROM player_bosses WHERE email=?", (email,)).fetchall()}
+    lines = ["Mini-boss board (BOSSES is free):"]
+    for key, boss in MINI_BOSSES.items():
+        status = "DEFEATED" if key in defeated else f"AVAILABLE at level {boss['level']}+"
+        lines.append(f"- {boss['name']} - {boss['zone']} [{status}]. {boss['description'].capitalize()}.")
+    lines.append("\nTravel to the listed zone, then email CHALLENGE followed by the boss name. Each mini-boss can be defeated only once per character.")
     return "\n".join(lines)
 
 def _map(p) -> str:
@@ -426,6 +502,8 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
             return _help()
         if upper == "QUESTS":
             return _quests(conn, email)
+        if upper == "BOSSES":
+            return _bosses(conn, email)
         if upper == "SHOP":
             if p["location"] != "Luminos":
                 return "The market is in Luminos. Email TRAVEL LUMINOS to head over there, then SHOP. No daily acton was used."
@@ -464,7 +542,24 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
             return "You have already accepted that quest. Email QUESTS to check progress. No daily action was used."
         conn.execute("INSERT INTO player_quests(email, quest_id, status, progress) VALUES (?, ?, 'active', 0) ON CONFLICT(email, quest_id) DO UPDATE SET STATUS='active', progress=0", (email, accept_quest))
         quest = QUESTS[accept_quest]
-        return f"Quest accepted: {accept_quest.title()}! {quest['description']} Suggested zone: {quest['zone']}. Reward: {quest['gold']} gold and {quest['xp']} XP. QUest acceptance is free; your daily action is unchanged."
+        return f"Quest accepted: {accept_quest.title()}! {quest['description']} Suggested zone: {quest['zone']}. Reward: {quest['gold']} gold and {quest['xp']} XP. Quest acceptance is free; your daily action is unchanged."
+
+    challenge_boss = upper[len("CHALLENGE "):].strip() if upper.startswith("CHALLENGE ") else None
+    if upper == "CHALLENGE":
+        return "Which mini-boss do you want to challenge? Email BOSSES for the list, then CHALLENGE followed by the boss name. No daily action was used."
+    if challenge_boss and challenge_boss not in MINI_BOSSES:
+        return "I don't recognise that mini-boss. Email BOSSES for the list. No daily action was used."
+    if challenge_boss:
+        boss = MINI_BOSSES[challenge_boss]
+        if p["enemy_name"]:
+            return "You are already in combat. Finish that fight or FLEE before challenging a mini-boss. No daily action was used."
+        if p["location"] != boss["zone"]:
+            return f"{boss['name']} can only be challenged in {boss['zone']}. Travel there first. No daily action was used."
+        if p["level"] < boss["level"]:
+            return f"You need to reach level {boss['level']} before challenging {boss['name']}. No daily action was used."
+        defeated = conn.execute("SELECT 1 FROM player_bosses WHERE email=? AND boss_id=?", (email, challenge_boss)).fetchone()
+        if defeated:
+            return f"You have already defeated {boss['name']}. Mini-bosses can only be defeated once per character. No daily action was used."
 
     travel_destination = None
     if upper.startswith("TRAVEL "):
@@ -475,7 +570,7 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
     elif upper == "TRAVEL":
         return "Where would you like to travel? Reply TRAVEL followed by a destination, such as TRAVEL HAUNTED RUINS. Email MAP for destinations. No daily action was used."
 
-    if upper not in ACTIONS and travel_destination is None and ability_name is None and buy_item  is None:
+    if upper not in ACTIONS and travel_destination is None and ability_name is None and buy_item is None and use_item is None and accept_quest is None and challenge_boss is None:
         return "I didn't recognise that command.\n\n" + _help()
 
     ability = ABILITIES.get(ability_name) if ability_name else None
@@ -492,7 +587,7 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
     if (upper in {"ATTACK", "DEFEND", "POTION", "FLEE", "USE BOMB", "USE FIRE SCROLL"} or ability_name) and not p["enemy_name"]:
         return "There is no enemy here right now. Reply EXPLORE to look for an adventure. No daily action was used."
     if buy_item and p["location"] != "Luminos":
-        return "You must be in ELuminos to shop. Email TRAVEL LUMINOS to return. No daily action was used."
+        return "You must be in Luminos to shop. Email TRAVEL LUMINOS to return. No daily action was used."
     if buy_item and p["gold"] < SHOP_ITEMS[buy_item]["price"]:
         return f"{buy_item.title()} costs {SHOP_ITEMS[buy_item]['price']} gold, but you only have {p['gold']}. No daily action was used."
     if buy_item and SHOP_ITEMS[buy_item]["kind"] == "weapon" and SHOP_ITEMS[buy_item]["bonus"] <= p["attack_bonus"]:
@@ -550,6 +645,12 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
             result.append("You have arrived safely. Reply EXPLORE tomorrow to search the area.")
         else:
             result.append("The town is safe. You can REST here to recover health, or use TRAVEL to leave.")
+    elif challenge_boss:
+        boss = MINI_BOSSES[challenge_boss]
+        name, hp, attack, _, _ = ENEMY_BY_NAME[boss["name"]]
+        conn.execute("UPDATE players SET enemy_name=?, enemy_hp=?, enemy_attack=? WHERE email=?", (name, hp, attack, email))
+        result.append(f"You challenge {name}, {boss['description']}! It has {hp} HP and hits hard for {attack} base attack.")
+        result.append("Prepare for a tough fight. Reply ATTACK, DEFEND, POTION, CAST <ability>, USE BOMB or FLEE. Defeating this mini-boss earns a large reward and permanently records the victory.")
     elif upper == "EXPLORE":
         roll = random.random()
         location = LOCATIONS[p["location"]]
@@ -630,6 +731,10 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
             _, _, _, xp_reward, gold_reward = ENEMY_BY_NAME[enemy_name]
             conn.execute("UPDATE players SET enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=gold+? WHERE email=?", (gold_reward, email))
             result.append(f"You defeat the {enemy_name}! You earn {xp_reward} XP and {gold_reward} gold.")
+            boss_key = next((key for key, boss in MINI_BOSSES.items() if boss["name"] == enemy_name), None)
+            if boss_key:
+                conn.execute("INSERT OR IGNORE INTO player_bosses(email, boss_id) VALUES (?, ?)", (email, boss_key))
+                result.append(f"VICTORY! {enemy_name} has been defeated. This victory is saved to your character.")
             level_msg = _level_up(conn, p, xp_reward)
             if level_msg:
                 result.append(level_msg)
@@ -686,6 +791,10 @@ def handle_email(conn, email: str, subject: str, body: str, timezone_name: str =
             _, _, _, xp_reward, gold_reward = ENEMY_BY_NAME[enemy_name]
             conn.execute("UPDATE players SET enemy_name=NULL, enemy_hp=0, enemy_attack=0, gold=gold+? WHERE email=?", (gold_reward, email))
             result.append(f"You defeat the {enemy_name}! You earn {xp_reward} XP and {gold_reward} gold.")
+            boss_key = next((key for key, boss in MINI_BOSSES.items() if boss["name"] == enemy_name), None)
+            if boss_key:
+                conn.execute("INSERT OR IGNORE INTO player_bosses(email, boss_id) VALUES (?, ?)", (email, boss_key))
+                result.append(f"VICTORY! {enemy_name} has been defeated. This victory is saved to your character.")
             level_msg = _level_up(conn, p, xp_reward)
             if level_msg:
                 result.append(level_msg)
